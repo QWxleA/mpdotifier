@@ -6,6 +6,18 @@ Originally based on [musnify-mpd](https://github.com/felipemarinho97/musnify-mpd
 
 Albumart is read from $HOME/Music/artist/album/cover.*. You might need something like [dunst](https://github.com/dunst-project/dunst) to actually show the notifications.
 
+## Enabling systemd service
+
+To enable the service, run:
+
+```sh
+systemctl --user enable --now mpdotifier.service
+```
+
+Enjoy your music!
+
+## Dependencies
+
 Dependencies:
 
 - python-mpd2
