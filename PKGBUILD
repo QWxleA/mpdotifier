@@ -12,13 +12,13 @@ source=("git+https://github.com/QWxlea/mpdotifier")
 md5sums=('SKIP')
 
 pkgver() {
-  cd "$srcdir/""
+  cd "$srcdir/"
   printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
 }
 
 package() {
-  cd "$srcdir/"
-  install -Dm755 mpdotifier "$pkgdir/usr/bin/mpdnotifier"
-  install -Dm755 mpdotifier.service "$pkgdir/usr/lib/systemd/user/mpdnotifier.service"
+  cd "$pkgname"
+  install -Dm755 mpdotifier "$pkgdir/usr/bin/mpdotifier"
+  install -Dm644 mpdotifier.service "$pkgdir/usr/lib/systemd/user/mpdotifier.service"
 }
 # vim:set ts=2 sw=2 et:
