@@ -5,7 +5,7 @@
 #          some nerdfont
 
 import argparse
-import musicpd
+from mpd import MPDClient
 import sys
 import time
 from os import environ
@@ -56,7 +56,7 @@ class NotificationWrapper:
 
 class MPDWrapper:
     def __init__(self):
-        self.client = musicpd.MPDClient()
+        self.client = MPDClient()
         self.client.timeout = 1
         self.client.idletimeout = None
         try:
