@@ -17,6 +17,10 @@ PROGRAM_NAME = "Mpdotifier"
 MUSICPATH = join(environ['HOME'],"Music")
 #MUSICPATH = os.environ["XDG_MUSIC_DIR"];
 ALBUM_COVER_FILE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".gif", ".svg")
+# Time to wait in seconds between checking mpd status changes
+POLLING_INTERVAL = 0.5
+# Time to wait in seconds between checking for mpd existing
+SLEEP_INTERVAL = 5
 
 class NotificationWrapper:
     def __init__(self):
@@ -150,7 +154,7 @@ class Mpdotifier (object):
                 if args.debug:
                     print("** {0}: Song updated: {1}".format(strftime("%a, %d %b %Y %H:%M:%S"), song))
 
-            sleep(0.5)
+            sleep(POLLING_INTERVAL)
 
     def stop(self):
         Notify.uninit()
