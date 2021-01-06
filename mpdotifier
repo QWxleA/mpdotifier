@@ -55,21 +55,35 @@ class NotificationWrapper:
             self.notification.update("MPD Stopped",icon="music")
         self.notification.show()
 
-class MPDWrapper:
+class Mpdotifier (object):
     def __init__(self):
+
+        self.nw = NotificationWrapper()
         self.client = MPDClient()
-        self.client.timeout = 1
-        self.client.idletimeout = None
-        try:
-            self.client.connect(args.host, args.port)
-        except:
-            Notify.Notification.new("Unable to get status from MPD",
-                                     "Probably misconfigured:\n" + sys.argv[0]).show()
-            Notify.uninit()
-            exit()
+        # self.client.timeout = 1  # Why?
+        # self.client.idletimeout = None
+
+    def start(self):
+        while True:
+            try:
+                self.client.connect(args.host, args.port)
+                print("{0}: Connected to MPD".format(strftime("%a, %d %b %Y %H:%M:%S")))
+                self.observe()
+            except KeyboardInterrupt:
+                print("{0}: Killed by way of keyboard...".format(strftime("%a, %d %b %Y %H:%M:%S")))
+                nw.uninit()
+                sys.exit()
+            except ConnectionError:
+                print("{}: Cannot connect to MPD (host: {} port: {})".format(strftime("%a, %d %b %Y %H:%M:%S"),
+                                                                             args.host,
+                                                                             args.port))
+                sleep(SLEEP_INTERVAL)
 
     def getCurrentSong(self):
-        song = self.client.currentsong()
+        try:
+            song = self.client.currentsong()
+        except:
+            self.start()
 
         try:
             artist = song["artist"]
@@ -117,28 +131,26 @@ class MPDWrapper:
         return song
 
     def getStatus(self):
-        return self.client.status()["state"]
+        try:
+            return self.client.status()["state"]
+        except:
+            self.start()
 
-class Mpdotifier (object):
-    def __init__(self):
-        self.nw = NotificationWrapper()
-
-    def start(self):
-        mpd = MPDWrapper()
+    def observe(self):
 
         status = ""
         song = ""
 
         while True:
 
-            actualStatus = mpd.getStatus()
+            actualStatus = self.getStatus()
             try:
-                actualSong = mpd.getCurrentSong()
+                actualSong = self.getCurrentSong()
             except KeyError:
                 actualSong = False
 
             if status != actualStatus:
-                status = mpd.getStatus()
+                status = self.getStatus()
                 if args.debug:
                     print("** {0}: Status change: {1}".format(strftime("%a, %d %b %Y %H:%M:%S"), status))
                 if actualStatus == "play":
@@ -149,15 +161,12 @@ class Mpdotifier (object):
                     self.nw.notifyStatus(status)
 
             if (song != actualSong) and status != "stop" and actualSong != False:
-                song = mpd.getCurrentSong()
+                song = self.getCurrentSong()
                 self.nw.notify(song)
                 if args.debug:
                     print("** {0}: Song updated: {1}".format(strftime("%a, %d %b %Y %H:%M:%S"), song))
 
             sleep(POLLING_INTERVAL)
-
-    def stop(self):
-        Notify.uninit()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="MPD notification daemon")
@@ -170,7 +179,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     mpdotifier = Mpdotifier()
-    try:
-        mpdotifier.start()
-    finally:
-        mpdotifier.stop()
+    mpdotifier.start()
