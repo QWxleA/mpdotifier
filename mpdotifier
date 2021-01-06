@@ -1,15 +1,12 @@
 #! /usr/bin/env python3
-#
-# Depends: aur/python-musicpd -- https://python-mpd2.readthedocs.io/en/latest/topics/commands.html
-#          libnotify-bin python-gobject
-#          some nerdfont
 
 import argparse
-from mpd import MPDClient
 import sys
-import time
+from time import sleep
 from os import environ
 from os.path import exists, join, split, splitext
+
+from mpd import MPDClient
 
 from gi import require_version
 require_version('Notify', '0.7')
@@ -129,7 +126,7 @@ class Mpdotifier (object):
         song = ""
 
         while True:
-            time.sleep(0.5)
+            sleep(0.5)
             actualStatus = mpd.getStatus()
             actualSong = mpd.getCurrentSong()
 
