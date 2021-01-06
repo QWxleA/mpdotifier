@@ -1,0 +1,168 @@
+#! /usr/bin/env python3
+#
+# Depends: aur/python-musicpd -- https://python-mpd2.readthedocs.io/en/latest/topics/commands.html
+#          libnotify-bin python-gobject
+#          some nerdfont
+
+import argparse
+import musicpd
+import sys
+import time
+from os import environ
+from os.path import exists, join, split, splitext
+
+from gi import require_version
+require_version('Notify', '0.7')
+from gi.repository import Notify
+from gi.repository.GdkPixbuf import Pixbuf
+
+PROGRAM_NAME = "Mpdotifier"
+MUSICPATH = join(environ['HOME'],"Music")
+#MUSICPATH = os.environ["XDG_MUSIC_DIR"];
+ALBUM_COVER_FILE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".gif", ".svg")
+
+class NotificationWrapper:
+    def __init__(self):
+        Notify.init(PROGRAM_NAME)
+        self.notification = Notify.Notification.new("Initializing {}..".format(PROGRAM_NAME))
+
+    def notify(self, song):
+        self.notification.clear_hints()
+        # \uf025 - 
+        # \uf43a - 
+        caption = '\uf025 {}'.format(song["title"]).replace("&", "&amp;")
+        body  = "\n<b>{}".format(song["album"]).replace("&", "&amp;")
+        try:
+            d = song["date"]
+            body += "({})".format(d)
+        except:
+            pass
+        body += "</b>\n\n<i>by: {}</i>\n\n".format(song["artist"]).replace("&", "&amp;")
+        body += "\uf43a {}".format(song["duration"])
+        if song["file_path"] == None:
+            self.notification.update(caption,body,icon="music")
+        else:
+            self.notification.update(caption,body)
+            self.notification.set_image_from_pixbuf(Pixbuf.new_from_file(song["file_path"]))
+        self.notification.show()
+
+    def notifyStatus(self, status):
+        self.notification.clear_hints()
+        if status == "pause":
+            self.notification.update("MPD Paused",icon="music")
+        elif status == "stop":
+            self.notification.update("MPD Stopped",icon="music")
+        self.notification.show()
+
+class MPDWrapper:
+    def __init__(self):
+        self.client = musicpd.MPDClient()
+        self.client.timeout = 1
+        self.client.idletimeout = None
+        try:
+            self.client.connect(args.host, args.port)
+        except:
+            Notify.Notification.new("Unable to get status from MPD",
+                                     "Probably misconfigured:\n" + sys.argv[0]).show()
+            Notify.uninit()
+            exit()
+
+    def getCurrentSong(self):
+        song = self.client.currentsong()
+
+        try:
+            artist = song["artist"]
+        except KeyError:
+            try:
+                 song["artist"] = "{} (?)".format(split(song['file'])[0])
+            except:
+                song["artist"] = "Unknown Artist"
+
+        try:
+            album = song["album"]
+        except KeyError:
+            song["album"] = "Unknown Album"
+
+        try:
+            title = song["title"]
+        except KeyError:
+            try:
+                song["title"] = "{} (?)".format(splitext(split(song['file'])[1])[0])
+            except KeyError:
+                song["title"] = "Unknown Title"
+
+        try:
+            song["duration"] = song["time"]
+        except:
+            song["duration"] = "not set"
+
+        file_path = None
+        try:
+            song_path = join(MUSICPATH, split(song['file'])[0])
+        except:
+            song_path = False
+
+        if song_path:
+            for ext in ALBUM_COVER_FILE_EXTENSIONS:
+                attempt_path = join(song_path, "cover" + ext)
+                if exists(attempt_path):
+                    file_path = attempt_path
+                    break
+        if song_path:
+            song["file_path"] = file_path
+        else:
+            song["file_path"] = ""
+
+        return song
+
+    def getStatus(self):
+        return self.client.status()["state"]
+
+class Mpdotifier (object):
+    def __init__(self):
+        self.nw = NotificationWrapper()
+
+    def start(self):
+        mpd = MPDWrapper()
+
+        status = ""
+        song = ""
+
+        while True:
+            time.sleep(0.5)
+            actualStatus = mpd.getStatus()
+            actualSong = mpd.getCurrentSong()
+
+            if status != actualStatus:
+                status = mpd.getStatus()
+
+                if actualStatus == "play":
+                    song = mpd.getCurrentSong()
+                    self.nw.notify(song)
+                else:
+                    self.nw.notifyStatus(status)
+
+            if (song != actualSong) and status != "stop":
+                song = mpd.getCurrentSong()
+                self.nw.notify(song)
+                if args.debug:
+                    print(song)
+
+    def stop(self):
+        Notify.uninit()
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="MPD notification daemon")
+    parser.add_argument("-d", "--debug", help="enable debugging",
+                        action="store_true")
+    parser.add_argument("-p", "--port", help="MPD port", default="6600",
+                        type=int)
+    parser.add_argument("-o", "--host", help="MPD host", default="127.0.0.1",
+                        type=str)
+    args = parser.parse_args()
+
+    mpdotifier = Mpdotifier()
+    try:
+        mpdotifier.start()
+    finally:
+        mpdotifier.stop()
