@@ -2,7 +2,7 @@
 
 import argparse
 import sys
-from time import sleep
+from time import sleep, strftime
 from os import environ
 from os.path import exists, join, split, splitext
 
@@ -126,24 +126,31 @@ class Mpdotifier (object):
         song = ""
 
         while True:
-            sleep(0.5)
+
             actualStatus = mpd.getStatus()
-            actualSong = mpd.getCurrentSong()
+            try:
+                actualSong = mpd.getCurrentSong()
+            except KeyError:
+                actualSong = False
 
             if status != actualStatus:
                 status = mpd.getStatus()
-
+                if args.debug:
+                    print("** {0}: Status change: {1}".format(strftime("%a, %d %b %Y %H:%M:%S"), status))
                 if actualStatus == "play":
-                    song = mpd.getCurrentSong()
-                    self.nw.notify(song)
+                    pass
+                    #song = mpd.getCurrentSong()
+                    #self.nw.notify(song)
                 else:
                     self.nw.notifyStatus(status)
 
-            if (song != actualSong) and status != "stop":
+            if (song != actualSong) and status != "stop" and actualSong != False:
                 song = mpd.getCurrentSong()
                 self.nw.notify(song)
                 if args.debug:
-                    print(song)
+                    print("** {0}: Song updated: {1}".format(strftime("%a, %d %b %Y %H:%M:%S"), song))
+
+            sleep(0.5)
 
     def stop(self):
         Notify.uninit()
