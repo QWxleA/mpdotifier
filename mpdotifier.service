@@ -12,7 +12,7 @@ After=dunst.service xfce4-notifyd.service
 ConditionUser=!@system
 
 [Service]
-Type=notify
+Type=simple
 Restart=on-failure
 ExecStart=/usr/bin/mpdotifier
 

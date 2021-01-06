@@ -14,6 +14,13 @@ To enable the service, run:
 systemctl --user enable --now mpdotifier.service
 ```
 
+To update:
+
+```sh
+systemctl --user daemon-reload
+systemctl --user restart mpdotifier.service
+```
+
 Enjoy your music!
 
 ## Dependencies
